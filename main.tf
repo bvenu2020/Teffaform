@@ -28,3 +28,90 @@ terraform {
     access_key = "Vgyzr1CbWlv8fZ0x2hsDjKKUfuAfDLZkMrqslaDj7ynZqMVtcnLPkBeMVjdAbXoMlxGO6igEfu7j+AStmxTxXg=="
   }
 }
+
+
+resource "azurerm_resource_group" "bermtec31" {
+  name = var.rgname
+  location = var.location
+}
+
+resource "azurerm_kubernetes_cluster" "bermtec-aks" {
+  name                = var.cluster_name
+  kubernetes_version  = var.kubernetes_version
+  location            = var.location
+  resource_group_name = azurerm_resource_group.bermtec31.name
+  dns_prefix          = var.cluster_name
+  node_resource_group = var.node_resource_group
+  default_node_pool {
+    name       = "btsystem"
+    node_count = var.system_node_count
+    vm_size    = "Standard_D2s_v3"
+    }
+  identity {
+    type = "SystemAssigned"
+    }
+  network_profile {
+    load_balancer_sku = "standard"
+    network_plugin = "kubenet" # azure (CNI)
+    }
+
+  depends_on = [ azurerm_resource_group.bermtec31 ]
+  }
+  
+resource "azurerm_virtual_network" "demonetwork" {
+  name                = var.virtual_network
+  address_space       = ["10.0.0.0/16"]
+  location            = var.location
+  resource_group_name = var.rgname
+  depends_on = [ azurerm_resource_group.bermtec31 ]
+}
+
+resource "azurerm_subnet" "demosubnet" {
+  name                 = var.azurerm_subnet
+  resource_group_name  = var.rgname
+  virtual_network_name = var.virtual_network
+  address_prefixes     = [ "10.0.2.0/24" ]
+  depends_on = [ azurerm_virtual_network.demonetwork ]
+  }
+
+resource "azurerm_recovery_services_vault" "myvault" {
+  name                = var.recovery_services_vault
+  location            = var.location
+  resource_group_name = var.rgname
+  sku                 = "Standard"
+  depends_on = [ azurerm_resource_group.bermtec31 ]
+}
+
+resource "azurerm_storage_account" "sadev1985" {
+  name                     = var.storage_account_name
+  location                 = var.location
+  resource_group_name      = var.rgname
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+
+  depends_on = [ azurerm_resource_group.bermtec31 ]
+  #depends_on = [ azurerm_storage_account.sadev1985 ]
+ }
+
+# resource "azurerm_storage_share" "file-share" {
+#    name                 = var.storage_share
+#    storage_account_name = var.storage_account_name
+#    quota                = 100
+  
+#   }
+
+resource "azurerm_storage_container" "tfstateback" {
+  #name                 = "example-container-name"
+   name                 = var.storage_container
+  storage_account_name = var.storage_account_name
+  depends_on = [ azurerm_storage_account.sadev1985 ]
+}
+ 
+# resource "azurerm_storage_account_network_rules" "test" {
+#     resource_group_name = var.rgname
+#     storage_account_name = sadev1985
+
+    # default_action = "Deny" 
+    # virtual_network_subnet_ids = [azurerm_subnet.demosubnet.id]
+    # bypass = ["none"]
+#}
