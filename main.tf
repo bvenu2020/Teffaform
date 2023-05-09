@@ -31,20 +31,20 @@ terraform {
 
 
 resource "azurerm_resource_group" "bermtec31" {
-  name = var.rgname
-  location = var.location
+  name = "devops-bermtec"
+  location = "eastus"
 }
 
-resource "azurerm_kubernetes_cluster" "bermtec-aks" {
-  name                = var.cluster_name
-  kubernetes_version  = var.kubernetes_version
-  location            = var.location
-  resource_group_name = azurerm_resource_group.bermtec31.name
-  dns_prefix          = var.cluster_name
-  node_resource_group = var.node_resource_group
+resource "azurerm_kubernetes_cluster" "bermtec31-aks" {
+  name                = "aks-demo"
+  kubernetes_version  = "1.25.6"
+  location            = "eastus"
+  resource_group_name = azurerm_resource_group.devops-bermtec.name
+  dns_prefix          = "aks-demo"
+  node_resource_group = "my_aks_tf_-node_resources_demo"
   default_node_pool {
     name       = "btsystem"
-    node_count = var.system_node_count
+    node_count = "2"
     vm_size    = "Standard_D2s_v3"
     }
   identity {
@@ -55,55 +55,55 @@ resource "azurerm_kubernetes_cluster" "bermtec-aks" {
     network_plugin = "kubenet" # azure (CNI)
     }
 
-  depends_on = [ azurerm_resource_group.bermtec31 ]
+  depends_on = [ azurerm_resource_group.devops-bermtec ]
   }
   
 resource "azurerm_virtual_network" "demonetwork" {
-  name                = var.virtual_network
+  name                = "demonetwork"
   address_space       = ["10.0.0.0/16"]
-  location            = var.location
-  resource_group_name = var.rgname
-  depends_on = [ azurerm_resource_group.bermtec31 ]
+  location            = "eastus"
+  resource_group_name = "devops-bermtec"
+  depends_on = [ azurerm_resource_group.devops-bermtec ]
 }
 
 resource "azurerm_subnet" "demosubnet" {
-  name                 = var.azurerm_subnet
-  resource_group_name  = var.rgname
-  virtual_network_name = var.virtual_network
+  name                 = "demosubnet"
+  resource_group_name  = "devops-bermtec"
+  virtual_network_name = "demonetwork"
   address_prefixes     = [ "10.0.2.0/24" ]
   depends_on = [ azurerm_virtual_network.demonetwork ]
   }
 
 resource "azurerm_recovery_services_vault" "myvault" {
-  name                = var.recovery_services_vault
-  location            = var.location
-  resource_group_name = var.rgname
+  name                = "demovault"
+  location            = "estus"
+  resource_group_name = "devops-bermtec"
   sku                 = "Standard"
-  depends_on = [ azurerm_resource_group.bermtec31 ]
+  depends_on = [ azurerm_resource_group.devops-bermtec ]
 }
 
 resource "azurerm_storage_account" "sadev1985" {
-  name                     = var.storage_account_name
-  location                 = var.location
-  resource_group_name      = var.rgname
+  name                     = "sadev1985"
+  location                 = "devops-bermtec"
+  resource_group_name      = "eastus"
   account_tier             = "Standard"
   account_replication_type = "LRS"
 
-  depends_on = [ azurerm_resource_group.bermtec31 ]
+  depends_on = [ azurerm_resource_group.devops-bermtec ]
   #depends_on = [ azurerm_storage_account.sadev1985 ]
  }
 
 # resource "azurerm_storage_share" "file-share" {
-#    name                 = var.storage_share
+#    name                 = file-share
 #    storage_account_name = var.storage_account_name
 #    quota                = 100
   
 #   }
 
 resource "azurerm_storage_container" "tfstateback" {
-  #name                 = "example-container-name"
-   name                 = var.storage_container
-  storage_account_name = var.storage_account_name
+  #name                 = "my-container-name"
+   name                 = "tfstateback"
+  storage_account_name = "sadev1985"
   depends_on = [ azurerm_storage_account.sadev1985 ]
 }
  
